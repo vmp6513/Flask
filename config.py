@@ -2,7 +2,7 @@ import os
 
 class Config:
     # GENERAL CONFIG
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'vmp6513'
+    SECRET_KEY = os.environ.get('SECRET_KEY') or b'_5#y2L"F4Q8z\n\xec]/'
     # EMAIL CONFIG
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.qq.com')
     MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))
