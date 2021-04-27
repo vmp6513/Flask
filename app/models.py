@@ -1,7 +1,7 @@
 from . import db
 from . import login_manager
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin
+from flask_login import UserMixin, AnonymousUserMixin
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
 
@@ -11,8 +11,14 @@ from flask import current_app
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-class Permission(Object):
-    pass
+
+class Permission(object):
+    FOLLOW = 0x01
+    COMMENT = 0x02
+    WRITE_ARTICLES = 0x04
+    MODERATE_COMMENTS = 0x08
+    ADMINISTER = 0x80
+
 
 class Role(db.Model):
     __tablename__ = 'roles'
@@ -26,10 +32,43 @@ class Role(db.Model):
     # 第一个参数：表明这个关系的另一端是哪个模型，如果模型类尚未定义，可用str代替
     # backref参数：向User模型中添加一个role属性，定义反向关系，这一属性可替代role_id访问Role模型，注意此时获取的是模型对象
     # db.relationship()都能自行找到关系中的外键，也可能需要用参数确认
-    users = db.relationship('User', backref='role')
+    users = db.relationship('User', backref='role', lazy='dynamic')
+
+    # 通过角色名roles查找现有角色，然后进行更新
+    # 如果数据库中没有该角色才会创建新角色对象
+    # 修改权限，创建新角色，都基于roles数组
+    @staticmethod
+    def insert_roles():
+        roles = {
+            'User': (Permission.FOLLOW | Permission.COMMENT
+                     | Permission.WRITE_ARTICLES, True),
+            'Moderator':
+            (Permission.FOLLOW | Permission.COMMENT | Permission.WRITE_ARTICLES
+             | Permission.MODERATE_COMMENTS, False),
+            'Administrator': (0xff, False)
+        }
+        for r in roles:
+            role = Role.query.filter_by(name=r).first()
+            if role is None:
+                role = Role(name=r)
+            role.permissions = roles[r][0]
+            role.default = roles[r][1]
+            db.session.add(role)
+        db.session.commit()
 
     def __repr__(self):
         return '<Role %r>' % self.name
+
+
+class AnonymousUser(AnonymousUserMixin):
+    def can(self, permissions):
+        return False
+
+    def is_administrator(self):
+        return False
+
+
+login_manager.anonymous_user = AnonymousUser
 
 
 class User(UserMixin, db.Model):
@@ -43,6 +82,15 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(64), unique=True, index=True)
 
     confirmed = db.Column(db.Boolean, default=False)
+
+    # 如果创建基类对象后还没有定义角色，电子邮件地址决定将其设为管理员或默认角色
+    def __init__(self, **kwargs):
+        super(User, self).__init__(**kwargs)
+        if self.role is None:
+            if self.email in current_app.config.get('FLASKY_ADMIN_EMAIL', []):
+                self.role = Role.query.filter_by(permissions=0xff).first()
+            if self.role is None:
+                self.role = Role.query.filter_by(default=True).first()
 
     @property
     def password(self):
@@ -59,7 +107,7 @@ class User(UserMixin, db.Model):
     def generate_confirmation_token(self, expiration=3600):
         s = Serializer(current_app.config['SECRET_KEY'], expiration)
         return s.dumps({'confirm': self.id}).decode('utf-8')
-    
+
     def generate_reset_token(self, expiration=3600):
         s = Serializer(current_app.config['SECRET_KEY'], expiration)
         return s.dumps({'reset': self.id}).decode('utf-8')
@@ -91,6 +139,13 @@ class User(UserMixin, db.Model):
         user.password = new_password
         db.session.add(user)
         return True
+
+    def can(self, permissions):
+        return self.role is not None and (self.role.permissions
+                                          & permissions) == permissions
+
+    def is_administrator(self):
+        return self.can(Permission.ADMINISTER)
 
     def __repr__(self):
         return '<User %r>' % self.username

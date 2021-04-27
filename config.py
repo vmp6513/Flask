@@ -1,5 +1,6 @@
 import os
 
+
 class Config:
     # GENERAL CONFIG
     SECRET_KEY = os.environ.get('SECRET_KEY') or b'_5#y2L"F4Q8z\n\xec]/'
@@ -12,7 +13,9 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD', 'jxmvgtcagoswbjie')
     FLASKY_MAIL_SUBJECT_PREFIX = '[Flasky]'
     FLASKY_MAIL_SENDER = 'Flasky Admin <373009794@qq.com>'
-    FLASKY_ADMIN = os.environ.get('FLASKY_ADMIN', 'Flasky Admin <373009794@qq.com>')
+    FLASKY_ADMIN = os.environ.get('FLASKY_ADMIN',
+                                  'Flasky Admin <373009794@qq.com>')
+    FLASKY_ADMIN_EMAIL = ['373009794@qq.com']
     # DATABASE CONFIG
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:w1470671730@localhost:3306/flask?charset=utf8'
