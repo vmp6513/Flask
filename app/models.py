@@ -11,11 +11,17 @@ from flask import current_app
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+class Permission(Object):
+    pass
 
 class Role(db.Model):
     __tablename__ = 'roles'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
+    # 默认角色
+    default = db.Column(db.Boolean, default=False, index=True)
+    # 权限字段，位标志，使用 & 来判断权限
+    permissions = db.Column(db.Integer)
 
     # 第一个参数：表明这个关系的另一端是哪个模型，如果模型类尚未定义，可用str代替
     # backref参数：向User模型中添加一个role属性，定义反向关系，这一属性可替代role_id访问Role模型，注意此时获取的是模型对象
