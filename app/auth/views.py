@@ -7,7 +7,7 @@ from ..email import send_email
 from ..models import User
 
 
-@auth.route('auth/reset', methods=['GET', 'POST'])
+@auth.route('/auth/reset', methods=['GET', 'POST'])
 def password_reset_request():
     if not current_user.is_anonymous:
         return redirect(url_for('main.index'))
@@ -23,7 +23,7 @@ def password_reset_request():
                        'Reset Your Password',
                        'auth/email/reset_password',
                        user=user,
-                       token)
+                       token=token)
             flash(
                 'An email with instructions to reset your password has been sent to your email.'
             )
@@ -32,7 +32,7 @@ def password_reset_request():
     return render_template('auth/reset_password.html', form=form)
 
 
-@auth.route('auth/reset/<token>', methods=['GET', 'POST'])
+@auth.route('/auth/reset/<token>', methods=['GET', 'POST'])
 def password_reset(token):
     form = PasswordResetForm()
     if form.validate_on_submit():
@@ -41,6 +41,7 @@ def password_reset(token):
             flash('Your password has been updated.')
             return redirect(url_for('auth.login'))
         else:
+            flash('The confirmation link is invalid or has expired.')
             return redirect(url_for('main.index'))
     return render_template('auth/reset_password.html', form=form)
 
