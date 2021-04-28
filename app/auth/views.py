@@ -7,6 +7,15 @@ from ..email import send_email
 from ..models import User
 
 
+@auth.before_app_request
+def before_request():
+    if current_user.is_authenticated:
+        current_user.ping()
+        # 这个判断条件，用于判断未确认前
+        if not current_user.confirmed and request.endpoint and request.endpoint != 'static' and request.blueprint != 'auth':
+            return redirect(url_for('auth.unconfirmed'))
+
+
 @auth.route('/auth/reset', methods=['GET', 'POST'])
 def password_reset_request():
     if not current_user.is_anonymous:
@@ -41,7 +50,7 @@ def password_reset(token):
             flash('Your password has been updated.')
             return redirect(url_for('auth.login'))
         else:
-            flash('The confirmation link is invalid or has expired.')
+            flash('The reset link is invalid or has expired.')
             return redirect(url_for('main.index'))
     return render_template('auth/reset_password.html', form=form)
 
@@ -123,12 +132,6 @@ def confirm(token):
         flash('The confirmation link is invalid or has expired.')
 
     return redirect(url_for('main.index'))
-
-
-@auth.before_app_request
-def before_request():
-    if current_user.is_authenticated and not current_user.confirmed and request.endpoint and request.blueprint != 'auth' and request.endpoint != 'static':
-        return redirect(url_for('auth.unconfirmed'))
 
 
 @auth.route('/auth/unconfirmed')

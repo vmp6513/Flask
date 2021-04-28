@@ -5,6 +5,8 @@ from flask_login import UserMixin, AnonymousUserMixin
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
 
+from datetime import datetime
+
 
 # flask_login要求程序实现一个回调函数，使用指定的标识符加载用户
 @login_manager.user_loader
@@ -75,22 +77,35 @@ class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, index=True)
-
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
-
     password_hash = db.Column(db.String(128))
     email = db.Column(db.String(64), unique=True, index=True)
-
     confirmed = db.Column(db.Boolean, default=False)
+
+    name = db.Column(db.String(64))
+    location = db.Column(db.String(64))
+    # db.Text() 不需要指定最大长度
+    about_me = db.Column(db.Text())
+    # db.Column的default参数可以指定一个函数作为默认值
+    # 每次需要生成默认值时会调用指定的函数
+    member_since = db.Column(db.DateTime(), default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime(), default=datetime.utcnow)
 
     # 如果创建基类对象后还没有定义角色，电子邮件地址决定将其设为管理员或默认角色
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
+        self.member_since = datetime.utcnow()
+        self.last_seen = datetime.utcnow()
         if self.role is None:
             if self.email in current_app.config.get('FLASKY_ADMIN_EMAIL', []):
                 self.role = Role.query.filter_by(permissions=0xff).first()
             if self.role is None:
                 self.role = Role.query.filter_by(default=True).first()
+
+    # 刷新用户的最后访问时间
+    def ping(self):
+        self.last_seen = datetime.utcnow()
+        db.session.add(self)
 
     @property
     def password(self):

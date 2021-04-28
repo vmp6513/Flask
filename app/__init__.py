@@ -3,12 +3,14 @@ from flask_bootstrap import Bootstrap
 from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_moment import Moment
 
 from config import config  # a dict variable
 
 bootstrap = Bootstrap()
 mail = Mail()
 db = SQLAlchemy()
+moment = Moment()
 
 login_manager = LoginManager()
 # 设置登录页面的端点（路由），记住要加上蓝本名
@@ -24,6 +26,7 @@ def create_app(config_name):
     mail.init_app(app)
     db.init_app(app)
     login_manager.init_app(app)
+    moment.init_app(app)
 
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
