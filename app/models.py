@@ -3,7 +3,7 @@ from . import login_manager
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, AnonymousUserMixin
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
-from flask import current_app, request
+from flask import current_app, request, url_for
 
 import hashlib
 from datetime import datetime
@@ -202,6 +202,16 @@ class User(UserMixin, db.Model):
             except IndentationError:
                 db.session.rollback()
 
+    def to_json(self):
+        json_user = {
+            'url': url_for('api.get_user', id=self.id, _external=True),
+            'username': self.username,
+            'member_since': self.member_since,
+            'last_seen': self.last_seen,
+            
+        }
+        return json_user
+
 
 class Post(db.Model):
     __tablename__ = 'posts'
@@ -229,3 +239,14 @@ class Post(db.Model):
                      author=u)
             db.session.add(p)
             db.session.commit()
+
+    def to_json(self):
+        json_post = {
+            'url': url_for('api.get_post', id=self.id, _external=True),
+            'body': self.body,
+            'timestamp': self.timestamp,
+            'author': url_for('api.get_user',
+                              id=self.author_id,
+                              _external=True)
+        }
+        return json_post
